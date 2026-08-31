@@ -1,0 +1,23 @@
+{
+  "name": "ab-significance",
+  "version": "1.0.0",
+  "description": "Did model B really beat model A, or is it sampling noise? Paired McNemar and bootstrap CI on the common-valid subset - zero dependencies.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "files": ["dist", "src"],
+  "scripts": {
+    "test": "node --test \"test/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
+    "demo": "node demo/demo.ts"
+  },
+  "repository": { "type": "git", "url": "git+https://github.com/m-sanchez/ab-significance.git" },
+  "author": "Miguel Sanchez <contact@miguelsanchez.co.uk>",
+  "license": "MIT",
+  "keywords": ["mcnemar", "bootstrap", "significance", "model-comparison", "evaluation", "statistics", "machine-learning", "ab-testing"],
+  "engines": { "node": ">=22.18" },
+  "devDependencies": { "@types/node": "^26.4.0", "typescript": "^5.7.0" }
+}
