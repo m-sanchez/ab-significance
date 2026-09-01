@@ -145,6 +145,18 @@ pairs to resample, and it misses a real five-point gap one time in seven.
   measured 85.6% coverage of a true 5-point gap at n=30 with 7% discordance
   (table above). Below roughly ten discordant pairs, read the interval as an
   illustration and the p-value as the decision.
+- The chi-square path floors the continuity correction at zero, so an even
+  split returns p = 1. R's `mcnemar.test` and statsmodels'
+  `mcnemar(exact=False, correction=True)` apply the correction literally and
+  get chi2 = 1/(b+c) instead: p = 0.789 at b = c = 7. Both conventions are in
+  the literature; this one keeps the approximation monotone in the evidence
+  and agreeing with the exact default. The divergence is pinned in
+  `test/reference-divergence.test.ts` so it stays a decision. The exact path,
+  which is what runs by default, matches scipy to machine precision.
+- The chi-square survival function is a Chebyshev fit (Numerical Recipes),
+  measured against scipy at 8.3e-8 worst-case absolute error over the range
+  this package reaches. Chi-square p-values are good to roughly seven
+  decimals and no further; the exact path has no such limit.
 - When one discordant cell is empty, no resample can cross zero, so the
   interval is one-sided by construction rather than by weight of evidence.
   `bootstrapDiff` flags this as `degenerate`, and `compareModels` says so in
