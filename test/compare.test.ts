@@ -17,6 +17,8 @@ function seeded(seed: number): () => number {
     z ^= z >>> 16;
     z = Math.imul(z, 0x21f0aaad);
     z ^= z >>> 15;
+    z = Math.imul(z, 0x735a2d97);
+    z ^= z >>> 15;
     return (z >>> 0) / 0x100000000;
   };
 }

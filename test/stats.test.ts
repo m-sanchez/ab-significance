@@ -82,3 +82,14 @@ test('paired bootstrap interval reproduces with a fixed seed and brackets the ob
   assert.ok(Math.abs(a.observed - 12) < 1e-9, 'B - A = (16-4)/100 * 100 = 12pp');
   assert.ok(a.significant, 'the interval excludes zero');
 });
+
+test('chi-square agrees with exact at an even split: |b-c| in {0,1} gives p~1', () => {
+  // the continuity correction floors |b-c|-1 at 0 before squaring, so chi2=0
+  // and p = erfc(0) ~ 1 (the erfc fit is exact to ~1e-7)
+  assert.ok(mcnemar(7, 7, { method: 'chi-square' }).p > 1 - 1e-6, 'b=c is maximal support for the null');
+  assert.ok(mcnemar(7, 8, { method: 'chi-square' }).p > 1 - 1e-6, '|b-c|=1 too');
+  // and it is monotone: a less even split is more, not less, significant
+  const even = mcnemar(7, 7, { method: 'chi-square' }).p;
+  const skew = mcnemar(3, 11, { method: 'chi-square' }).p;
+  assert.ok(skew < even, 'a lopsided split is more significant than an even one');
+});

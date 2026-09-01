@@ -91,7 +91,7 @@ npm run demo
 npm run typecheck
 ```
 
-Install: `npm install github:m-sanchez/ab-significance#v1.0.0` (not yet on
+Install: `npm install github:m-sanchez/ab-significance#v1.0.1` (not yet on
 npm; CI proves the packed tarball imports). Node 22.18+, zero runtime
 dependencies.
 

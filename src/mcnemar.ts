@@ -63,11 +63,15 @@ export function mcnemar(
   if (method === 'exact') {
     p = binomialTwoSided(Math.min(aOnly, bOnly), discordant);
   } else {
-    // chi-square with continuity correction; unreliable for small discordant
+    // chi-square with continuity correction; unreliable for small discordant.
+    // The correction is |b-c|-1 floored at 0 BEFORE squaring, so |b-c| in
+    // {0,1} gives chi2=0 and p=1 (maximal support for the null), matching
+    // the exact test at an even split.
     if (discordant === 0) p = 1;
     else {
-      const chi2 = (Math.abs(aOnly - bOnly) - 1) ** 2 / discordant;
-      p = chiSquareSurvival1df(Math.max(0, chi2));
+      const d = Math.max(0, Math.abs(aOnly - bOnly) - 1);
+      const chi2 = (d * d) / discordant;
+      p = chiSquareSurvival1df(chi2);
     }
   }
   const favours = aOnly === bOnly ? null : bOnly > aOnly ? 'B' : 'A';
