@@ -4,5 +4,7 @@ export { binomialTwoSided, mcnemar } from './mcnemar.ts';
 export type { McNemarResult } from './mcnemar.ts';
 export { bootstrapDiff } from './bootstrap.ts';
 export type { BootstrapInterval, PairedPoint } from './bootstrap.ts';
+export { powerAt, requiredN, minimumDetectableEffect } from './power.ts';
+export type { PowerModel } from './power.ts';
 export { compareModels } from './compare.ts';
 export type { Comparison, CompareOptions, Verdict } from './compare.ts';

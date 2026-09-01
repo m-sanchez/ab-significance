@@ -77,6 +77,23 @@ c.statement; // a sentence that refuses to overclaim
   separable and still too small to act on. Declaring the minimum effect
   you care about *before* you look is enforced by the option, not left to
   discipline: a separable-but-tiny result gets its own verdict.
+- **Both instruments gate the verdict.** The p-value and the interval can
+  reach opposite conclusions on small discordant counts, and when they do the
+  verdict is `'instruments disagree'` and the statement says which said what.
+  It never prints an interval excluding zero beside "not distinguishable".
+- **How many examples would it take** (`requiredN`,
+  `minimumDetectableEffect`). A null result is only worth acting on if the
+  eval could have seen the effect. Both answers enumerate the exact binomial
+  rejection region - no simulation, no dependency, same answer every time.
+
+```ts
+import { requiredN, minimumDetectableEffect } from '@m-sanchez/ab-significance';
+
+// a pilot run disagreed on 20% of examples: how many to resolve a 10pp gap?
+requiredN({ minEffectPct: 10, discordanceRate: 0.2 });     // 168
+// and what can the 60 items you already have resolve, at 80% power?
+minimumDetectableEffect({ n: 60, discordanceRate: 0.2 });  // 16.21 (pp)
+```
 
 ## What this instrument actually resolves
 

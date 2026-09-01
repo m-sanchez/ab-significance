@@ -27,7 +27,10 @@ export function binomialTwoSided(k: number, n: number): number {
 }
 
 const _logFactorialCache = [0, 0];
-function logFactorial(n: number): number {
+/** log(n!) with a growing cache. Not part of the package's public surface
+ * (index.ts does not re-export it); src/power.ts needs it to weight the
+ * distribution of discordant counts without underflowing at large n. */
+export function logFactorial(n: number): number {
   if (n < _logFactorialCache.length) return _logFactorialCache[n];
   let value = _logFactorialCache[_logFactorialCache.length - 1];
   for (let i = _logFactorialCache.length; i <= n; i++) {
