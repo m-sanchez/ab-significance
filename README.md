@@ -50,7 +50,7 @@ c.statement; // a sentence that refuses to overclaim
    The disagreement is within sampling noise; the models are not distinguishable here.
 
 3. B skips the hard questions and looks better than it is
-   ... (55 excluded, one side unscored): A 100.0%, B 72.7%; McNemar p=0.0001,
+   ... (45 excluded, one side unscored): A 100.0%, B 72.7%; McNemar p=0.0001,
    B-A -27.3pp [-40.0, -16.4]. A is better, beyond noise and beyond the declared bar.
    (B's raw accuracy over what it answered would look like 73%.)
 ```
