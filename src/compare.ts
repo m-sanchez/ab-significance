@@ -15,7 +15,11 @@ export type Verdict =
   | 'B better'
   | 'A better'
   | 'no separable difference'
-  | 'separable but below the declared bar';
+  | 'separable but below the declared bar'
+  /** the exact test and the interval reach opposite conclusions; the sign is
+   * not resolved by the evidence, and neither instrument is preferred over
+   * the other silently */
+  | 'instruments disagree';
 
 export interface Comparison {
   table: PairedTable;
@@ -57,8 +61,15 @@ export function compareModels(a: Outcome[], b: Outcome[], opts: CompareOptions =
   const accB = table.n === 0 ? 0 : (100 * (table.bothCorrect + table.bOnly)) / table.n;
   const minEffect = opts.minEffectPct ?? 0;
 
+  // Both instruments gate the verdict. Preferring one silently is how the
+  // statement used to print a 95% interval excluding zero directly beside
+  // "the models are not distinguishable here" (reachable at aOnly=0,
+  // bOnly=4, n=204). When they disagree the honest answer is that they
+  // disagree, and the gloss says which said what.
   let verdict: Verdict;
-  if (!test.separable) {
+  if (test.separable !== boot.significant) {
+    verdict = 'instruments disagree';
+  } else if (!test.separable) {
     verdict = 'no separable difference';
   } else if (Math.abs(boot.observed) < minEffect) {
     verdict = 'separable but below the declared bar';
@@ -74,12 +85,17 @@ export function compareModels(a: Outcome[], b: Outcome[], opts: CompareOptions =
     `: A ${accA.toFixed(1)}%, B ${accB.toFixed(1)}%; ` +
     `McNemar p=${test.p.toFixed(4)}, ` +
     `B-A ${boot.observed >= 0 ? '+' : ''}${boot.observed.toFixed(1)}pp ` +
-    `[${boot.low.toFixed(1)}, ${boot.high.toFixed(1)}]. ${verdictGloss(verdict, minEffect)}`;
+    `[${boot.low.toFixed(1)}, ${boot.high.toFixed(1)}]. ${verdictGloss(verdict, minEffect, test, boot)}`;
 
   return { table, mcnemar: test, bootstrap: boot, verdict, accuracy: { a: accA, b: accB }, statement };
 }
 
-function verdictGloss(v: Verdict, minEffect: number): string {
+function verdictGloss(
+  v: Verdict,
+  minEffect: number,
+  test: McNemarResult,
+  boot: BootstrapInterval
+): string {
   switch (v) {
     case 'no separable difference':
       return 'The disagreement is within sampling noise; the models are not distinguishable here.';
@@ -89,5 +105,27 @@ function verdictGloss(v: Verdict, minEffect: number): string {
       return 'B is better, beyond noise and beyond the declared bar.';
     case 'A better':
       return 'A is better, beyond noise and beyond the declared bar.';
+    case 'instruments disagree':
+      return disagreementGloss(test, boot);
   }
+}
+
+/** Say plainly which instrument said what, rather than printing both numbers
+ * and asserting one of them. */
+function disagreementGloss(test: McNemarResult, boot: BootstrapInterval): string {
+  const pairs = `${test.discordant} discordant pair${test.discordant === 1 ? '' : 's'}`;
+  const pct = `${(boot.level * 100).toFixed(0)}%`;
+  if (boot.significant) {
+    const why = boot.degenerate
+      ? ` Every disagreement fell one way (${test.aOnly === 0 ? 'A won none' : 'B won none'}), so no resample can cross zero and the interval is one-sided by construction, not by weight of evidence.`
+      : '';
+    return (
+      `The instruments disagree: the ${pct} interval excludes zero, but the exact test cannot ` +
+      `resolve the sign from ${pairs} (p=${test.p.toFixed(4)}).${why} The sign is not resolved.`
+    );
+  }
+  return (
+    `The instruments disagree: the exact test resolves the sign from ${pairs} ` +
+    `(p=${test.p.toFixed(4)}), but the ${pct} interval still contains zero. The sign is not resolved.`
+  );
 }

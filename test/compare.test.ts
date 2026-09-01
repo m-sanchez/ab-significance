@@ -79,3 +79,73 @@ test('the statement reports the common-valid n and any exclusions', () => {
   assert.equal(c.table.n, 2);
   assert.match(c.statement, /1 excluded, one side unscored/);
 });
+
+/** Build a paired table with exactly the requested cell counts. */
+function fromCells(bothCorrect: number, bothWrong: number, aOnly: number, bOnly: number) {
+  const a: Outcome[] = [];
+  const b: Outcome[] = [];
+  let i = 0;
+  const push = (ac: boolean, bc: boolean, k: number) => {
+    for (let j = 0; j < k; j++, i++) {
+      a.push({ id: String(i), correct: ac });
+      b.push({ id: String(i), correct: bc });
+    }
+  };
+  push(true, true, bothCorrect);
+  push(false, false, bothWrong);
+  push(true, false, aOnly);
+  push(false, true, bOnly);
+  return { a, b };
+}
+
+test('the emitted statement never contradicts the interval printed beside it', () => {
+  // The statement is this package's product. It prints the p-value and the
+  // interval in one sentence and then glosses them. A gloss that says "not
+  // distinguishable" beside an interval that excludes zero - or that names a
+  // winner beside an interval straddling zero - is the worst output this
+  // package can produce, so sweep the small-count corner where the two
+  // instruments come apart and assert the emitted sentence never does it.
+  const violations: string[] = [];
+  for (const filler of [0, 10, 40, 200]) {
+    for (let aOnly = 0; aOnly <= 8; aOnly++) {
+      for (let bOnly = 0; bOnly <= 8; bOnly++) {
+        const { a, b } = fromCells(Math.ceil(filler / 2), Math.floor(filler / 2), aOnly, bOnly);
+        const c = compareModels(a, b, { seed: 7, bootstrapIterations: 1000 });
+        const saysUnresolved = /not distinguishable here/.test(c.statement);
+        const saysWinner = /beyond noise/.test(c.statement);
+        const where = `filler=${filler} aOnly=${aOnly} bOnly=${bOnly} n=${c.table.n}`;
+        if (c.bootstrap.significant && saysUnresolved) {
+          violations.push(`${where}: interval [${c.bootstrap.low.toFixed(1)}, ${c.bootstrap.high.toFixed(1)}] excludes zero but the sentence says the models are not distinguishable`);
+        }
+        if (saysWinner && !(c.bootstrap.significant && c.mcnemar.separable)) {
+          violations.push(`${where}: the sentence names a winner on p=${c.mcnemar.p.toFixed(4)} / interval [${c.bootstrap.low.toFixed(1)}, ${c.bootstrap.high.toFixed(1)}]`);
+        }
+        if (c.verdict === 'no separable difference' && c.bootstrap.significant) {
+          violations.push(`${where}: verdict 'no separable difference' while the interval excludes zero`);
+        }
+      }
+    }
+  }
+  assert.equal(
+    violations.length,
+    0,
+    `${violations.length} self-contradicting statements:\n  ` + violations.slice(0, 8).join('\n  ')
+  );
+});
+
+test('a one-sided interval on four discordant pairs is reported as unresolved, not as noise', () => {
+  // The case that used to print a 95% interval of [0.5, 3.9] immediately
+  // beside "the models are not distinguishable here": 204 examples, B wins
+  // all four disagreements. Four coin flips landing the same way is p=0.125,
+  // and the percentile interval cannot contain zero because no resample can
+  // cross it.
+  const { a, b } = fromCells(102, 98, 0, 4);
+  const c = compareModels(a, b, { seed: 42 });
+  assert.ok(c.bootstrap.significant, 'the interval still excludes zero');
+  assert.ok(!c.mcnemar.separable, 'the exact test still cannot resolve four pairs');
+  assert.equal(c.verdict, 'instruments disagree');
+  assert.ok(c.bootstrap.degenerate, 'A won none, so no resample can cross zero');
+  assert.match(c.statement, /one-sided by construction/);
+  assert.match(c.statement, /The sign is not resolved\./);
+  assert.doesNotMatch(c.statement, /not distinguishable here/);
+});
