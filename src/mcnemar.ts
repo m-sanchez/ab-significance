@@ -71,7 +71,11 @@ export function mcnemar(
     else {
       const d = Math.max(0, Math.abs(aOnly - bOnly) - 1);
       const chi2 = (d * d) / discordant;
-      p = chiSquareSurvival1df(chi2);
+      // The erfc fit is a Chebyshev approximation, accurate to ~1.2e-7 but
+      // not bounded by 1: erfc(0) evaluates to 1.0000000300000005, so an
+      // even split used to return an impossible p-value. Clamp like the
+      // exact path does at binomialTwoSided.
+      p = Math.min(1, Math.max(0, chiSquareSurvival1df(chi2)));
     }
   }
   const favours = aOnly === bOnly ? null : bOnly > aOnly ? 'B' : 'A';

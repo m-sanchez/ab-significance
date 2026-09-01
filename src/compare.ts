@@ -19,7 +19,10 @@ export type Verdict =
   /** the exact test and the interval reach opposite conclusions; the sign is
    * not resolved by the evidence, and neither instrument is preferred over
    * the other silently */
-  | 'instruments disagree';
+  | 'instruments disagree'
+  /** the two runs share no example that both models scored, so there is
+   * nothing to compare - a broken id join, not a scientific negative */
+  | 'insufficient overlap';
 
 export interface Comparison {
   table: PairedTable;
@@ -32,8 +35,11 @@ export interface Comparison {
 }
 
 export interface CompareOptions {
+  /** significance threshold for the exact test; also sets the interval level
+   * to 1 - alpha unless `level` is supplied and agrees */
   alpha?: number;
   bootstrapIterations?: number;
+  /** confidence level for the interval; must equal 1 - alpha if both given */
   level?: number;
   seed?: number;
   /** minimum B-minus-A improvement (percentage points) worth acting on;
@@ -42,8 +48,20 @@ export interface CompareOptions {
 }
 
 export function compareModels(a: Outcome[], b: Outcome[], opts: CompareOptions = {}): Comparison {
+  // The decision threshold and the interval printed beside it are one
+  // setting, not two. {alpha: 0.01} used to buy a 99%-strict verdict
+  // reported next to a 95% interval in the same sentence.
+  const alpha = opts.alpha ?? 0.05;
+  if (opts.alpha !== undefined && opts.level !== undefined && Math.abs(opts.level - (1 - opts.alpha)) > 1e-12) {
+    throw new RangeError(
+      `alpha=${opts.alpha} and level=${opts.level} disagree: the interval reported beside a ` +
+        `verdict must be the ${((1 - opts.alpha) * 100).toFixed(0)}% interval. Pass one or the other.`
+    );
+  }
+  const level = opts.level ?? 1 - alpha;
+
   const table = pairedTable(a, b);
-  const test = mcnemar(table.aOnly, table.bOnly, { alpha: opts.alpha });
+  const test = mcnemar(table.aOnly, table.bOnly, { alpha });
 
   const pairs = [
     ...Array(table.bothCorrect).fill({ aCorrect: true, bCorrect: true }),
@@ -53,7 +71,7 @@ export function compareModels(a: Outcome[], b: Outcome[], opts: CompareOptions =
   ];
   const boot = bootstrapDiff(pairs, {
     iterations: opts.bootstrapIterations,
-    level: opts.level,
+    level,
     seed: opts.seed
   });
 
@@ -67,7 +85,12 @@ export function compareModels(a: Outcome[], b: Outcome[], opts: CompareOptions =
   // bOnly=4, n=204). When they disagree the honest answer is that they
   // disagree, and the gloss says which said what.
   let verdict: Verdict;
-  if (test.separable !== boot.significant) {
+  if (table.n === 0) {
+    // No shared scorable example is a broken join, not a finding. Reporting
+    // "A 0.0%, B 0.0%, not distinguishable" here hands a consumer a
+    // confident null drawn from no data.
+    verdict = 'insufficient overlap';
+  } else if (test.separable !== boot.significant) {
     verdict = 'instruments disagree';
   } else if (!test.separable) {
     verdict = 'no separable difference';
@@ -79,13 +102,24 @@ export function compareModels(a: Outcome[], b: Outcome[], opts: CompareOptions =
 
   const excluded =
     table.excluded.onlyA.length + table.excluded.onlyB.length + table.excluded.neither.length;
+  const dupes = table.duplicates.length;
+  const dupeNote =
+    dupes === 0
+      ? ''
+      : ` ${dupes} id${dupes === 1 ? '' : 's'} appeared more than once in the inputs` +
+        ` (${table.duplicates.slice(0, 3).join(', ')}${dupes > 3 ? ', ...' : ''});` +
+        ` only the last outcome for each was counted, so n is below the row count.`;
+
   const statement =
-    `on the ${table.n} examples both models scored` +
-    (excluded > 0 ? ` (${excluded} excluded, one side unscored)` : '') +
-    `: A ${accA.toFixed(1)}%, B ${accB.toFixed(1)}%; ` +
-    `McNemar p=${test.p.toFixed(4)}, ` +
-    `B-A ${boot.observed >= 0 ? '+' : ''}${boot.observed.toFixed(1)}pp ` +
-    `[${boot.low.toFixed(1)}, ${boot.high.toFixed(1)}]. ${verdictGloss(verdict, minEffect, test, boot)}`;
+    (table.n === 0
+      ? insufficientOverlapStatement(a, b)
+      : `on the ${table.n} examples both models scored` +
+        (excluded > 0 ? ` (${excluded} excluded, one side unscored)` : '') +
+        `: A ${accA.toFixed(1)}%, B ${accB.toFixed(1)}%; ` +
+        `McNemar p=${test.p.toFixed(4)}, ` +
+        `B-A ${boot.observed >= 0 ? '+' : ''}${boot.observed.toFixed(1)}pp ` +
+        `[${boot.low.toFixed(1)}, ${boot.high.toFixed(1)}]. ` +
+        verdictGloss(verdict, minEffect, test, boot)) + dupeNote;
 
   return { table, mcnemar: test, bootstrap: boot, verdict, accuracy: { a: accA, b: accB }, statement };
 }
@@ -107,7 +141,26 @@ function verdictGloss(
       return 'A is better, beyond noise and beyond the declared bar.';
     case 'instruments disagree':
       return disagreementGloss(test, boot);
+    case 'insufficient overlap':
+      return 'No example was scored by both models; there is nothing to compare.';
   }
+}
+
+/** Name what each side contributed, so a mismatched id scheme reads as a
+ * broken join rather than as a null result. */
+function insufficientOverlapStatement(a: Outcome[], b: Outcome[]): string {
+  const idsA = new Set(a.map((o) => o.id));
+  const idsB = new Set(b.map((o) => o.id));
+  let shared = 0;
+  for (const id of idsA) if (idsB.has(id)) shared++;
+  return (
+    `no example was scored by both models: A contributed ${idsA.size} ids, ` +
+    `B contributed ${idsB.size} ids, ${shared} shared. ` +
+    (shared === 0
+      ? 'The two runs share no ids at all - check that both use the same id scheme.'
+      : 'Every shared id was unscored on at least one side.') +
+    ' Nothing can be compared here.'
+  );
 }
 
 /** Say plainly which instrument said what, rather than printing both numbers

@@ -86,10 +86,45 @@ test('paired bootstrap interval reproduces with a fixed seed and brackets the ob
 test('chi-square agrees with exact at an even split: |b-c| in {0,1} gives p~1', () => {
   // the continuity correction floors |b-c|-1 at 0 before squaring, so chi2=0
   // and p = erfc(0) ~ 1 (the erfc fit is exact to ~1e-7)
-  assert.ok(mcnemar(7, 7, { method: 'chi-square' }).p > 1 - 1e-6, 'b=c is maximal support for the null');
-  assert.ok(mcnemar(7, 8, { method: 'chi-square' }).p > 1 - 1e-6, '|b-c|=1 too');
+  const even7 = mcnemar(7, 7, { method: 'chi-square' }).p;
+  assert.ok(even7 <= 1, `a p-value cannot exceed 1, got ${even7}`);
+  assert.ok(even7 > 1 - 1e-6, 'b=c is maximal support for the null');
+  const near = mcnemar(7, 8, { method: 'chi-square' }).p;
+  assert.ok(near <= 1 && near > 1 - 1e-6, '|b-c|=1 too');
   // and it is monotone: a less even split is more, not less, significant
   const even = mcnemar(7, 7, { method: 'chi-square' }).p;
   const skew = mcnemar(3, 11, { method: 'chi-square' }).p;
   assert.ok(skew < even, 'a lopsided split is more significant than an even one');
+});
+
+test('the chi-square path returns a probability for every reachable table', () => {
+  // The exact path clamps at 1; the chi-square path did not, and the erfc
+  // Chebyshev fit overshoots at zero (erfc(0) = 1.0000000300000005 under the
+  // Numerical Recipes coefficients), so mcnemar(b, b, {method:'chi-square'})
+  // returned an impossible p-value for every even split.
+  for (let d = 0; d <= 40; d++) {
+    for (let aOnly = 0; aOnly <= d; aOnly++) {
+      const p = mcnemar(aOnly, d - aOnly, { method: 'chi-square' }).p;
+      assert.ok(p >= 0 && p <= 1, `p=${p} out of [0,1] at aOnly=${aOnly}, bOnly=${d - aOnly}`);
+    }
+  }
+});
+
+test('duplicate ids are surfaced, not silently collapsed', () => {
+  // A resumed or retried eval run writes the same example twice. The table
+  // keeps the last outcome and n shrinks with no record of why, so a
+  // 3-example run silently becomes a 2-example run.
+  const a: Outcome[] = [
+    { id: '1', correct: true },
+    { id: '2', correct: false },
+    { id: '2', correct: true } // retried, and the retry passed
+  ];
+  const b: Outcome[] = [
+    { id: '1', correct: true },
+    { id: '2', correct: true },
+    { id: '3', correct: true }
+  ];
+  const t = pairedTable(a, b);
+  assert.deepEqual(t.duplicates, ['2'], 'the repeated id is named');
+  assert.equal(t.n, 2, 'and n is still the distinct-id count, now visibly so');
 });

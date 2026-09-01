@@ -149,3 +149,35 @@ test('a one-sided interval on four discordant pairs is reported as unresolved, n
   assert.match(c.statement, /The sign is not resolved\./);
   assert.doesNotMatch(c.statement, /not distinguishable here/);
 });
+
+test('a broken id join is an explicit insufficient-overlap verdict, not a confident null', () => {
+  // A typo in one side's id scheme produces zero overlap. That used to come
+  // back as verdict 'no separable difference' with "A 0.0%, B 0.0%" and
+  // "the models are not distinguishable here" - a scientific conclusion
+  // drawn from no data, which a consumer branching on the verdict reads as
+  // an answer rather than as a broken join.
+  const a: Outcome[] = Array.from({ length: 40 }, (_, i) => ({ id: `ex-${i}`, correct: i % 2 === 0 }));
+  const b: Outcome[] = Array.from({ length: 40 }, (_, i) => ({ id: `ex_${i}`, correct: i % 3 === 0 }));
+  const c = compareModels(a, b);
+  assert.equal(c.table.n, 0);
+  assert.equal(c.verdict, 'insufficient overlap');
+  assert.match(c.statement, /40 ids/, 'the statement names what each side contributed');
+  assert.match(c.statement, /0 .*(shared|common)/i);
+  assert.doesNotMatch(c.statement, /not distinguishable here/);
+});
+
+test('alpha and the interval level cannot be set inconsistently', () => {
+  // alpha was forwarded to the test but not to the interval, so {alpha: 0.01}
+  // printed a 99%-strict separability decision beside a 95% interval in the
+  // same sentence, with nothing marking the mismatch.
+  const { a, b } = fromCells(70, 10, 4, 16);
+  const strict = compareModels(a, b, { alpha: 0.01, seed: 3 });
+  assert.equal(strict.bootstrap.level, 0.99, 'the interval follows the alpha that produced the verdict');
+  assert.match(strict.statement, /99%/);
+
+  assert.throws(
+    () => compareModels(a, b, { alpha: 0.01, level: 0.95 }),
+    /alpha/,
+    'asking for a 99% test and a 95% interval in one call is a mistake, not a feature'
+  );
+});

@@ -30,6 +30,11 @@ export interface PairedTable {
   discordant: number;
   /** ids one model could score and the other could not (excluded, named) */
   excluded: { onlyA: string[]; onlyB: string[]; neither: string[] };
+  /** ids that appeared more than once on one side (a resumed or retried eval
+   * run writes the same example twice). Only the last outcome for such an id
+   * is counted, so `n` is smaller than the row count; the ids are named here
+   * rather than left to be inferred from a shrunken denominator. */
+  duplicates: string[];
 }
 
 /** Build the paired contingency table over the common-valid subset. An
@@ -37,14 +42,22 @@ export interface PairedTable {
  * silently counted as a loss for the model that skipped it. */
 export function pairedTable(a: Outcome[], b: Outcome[]): PairedTable {
   const byId = new Map<string, { a?: boolean | null; b?: boolean | null }>();
-  for (const o of a) {
-    if (!byId.has(o.id)) byId.set(o.id, {});
-    byId.get(o.id)!.a = o.correct ?? null;
-  }
-  for (const o of b) {
-    if (!byId.has(o.id)) byId.set(o.id, {});
-    byId.get(o.id)!.b = o.correct ?? null;
-  }
+  const duplicates: string[] = [];
+  const seenDuplicate = new Set<string>();
+  const record = (side: 'a' | 'b', rows: Outcome[]) => {
+    const seen = new Set<string>();
+    for (const o of rows) {
+      if (seen.has(o.id) && !seenDuplicate.has(o.id)) {
+        seenDuplicate.add(o.id);
+        duplicates.push(o.id);
+      }
+      seen.add(o.id);
+      if (!byId.has(o.id)) byId.set(o.id, {});
+      byId.get(o.id)![side] = o.correct ?? null;
+    }
+  };
+  record('a', a);
+  record('b', b);
 
   let bothCorrect = 0;
   let bothWrong = 0;
@@ -75,6 +88,7 @@ export function pairedTable(a: Outcome[], b: Outcome[]): PairedTable {
     aOnly,
     bOnly,
     discordant: aOnly + bOnly,
-    excluded: { onlyA, onlyB, neither }
+    excluded: { onlyA, onlyB, neither },
+    duplicates
   };
 }
