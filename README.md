@@ -6,6 +6,8 @@
 [![CI](https://github.com/m-sanchez/ab-significance/actions/workflows/test.yml/badge.svg)](https://github.com/m-sanchez/ab-significance/actions/workflows/test.yml)
 ![License](https://img.shields.io/badge/license-MIT-6E6E6E)
 
+> **In plain English:** version B looks better than A, but is it a real improvement or just luck? This tells you whether the difference is statistically real.
+
 Did model B really beat model A, or is it sampling noise? Paired McNemar
 and a bootstrap confidence interval on the common-valid subset. Zero
 dependencies.
