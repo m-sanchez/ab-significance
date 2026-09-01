@@ -10,7 +10,8 @@ Did model B really beat model A, or is it sampling noise? Paired McNemar
 and a bootstrap confidence interval on the common-valid subset. Zero
 dependencies.
 
-[More tools](https://github.com/m-sanchez) · [Working rules](https://miguelsanchez.co.uk/ethics)
+[More tools](https://github.com/m-sanchez) · [Working rules](https://miguelsanchez.co.uk/ethics) ·
+[Worked example: routing-study](https://github.com/m-sanchez/routing-study)
 
 "B scored 82% and A scored 72%, so B is better" is how good models get
 shipped on ten items of luck. A ten-point gap on a sixty-item eval is
