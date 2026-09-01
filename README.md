@@ -5,6 +5,7 @@
 ![Dependencies](https://img.shields.io/badge/dependencies-0-B45309)
 [![CI](https://github.com/m-sanchez/ab-significance/actions/workflows/test.yml/badge.svg)](https://github.com/m-sanchez/ab-significance/actions/workflows/test.yml)
 ![License](https://img.shields.io/badge/license-MIT-6E6E6E)
+[![npm](https://img.shields.io/npm/v/@m-sanchez/ab-significance?color=CB3837&logo=npm&logoColor=white)](https://www.npmjs.com/package/@m-sanchez/ab-significance)
 
 > **In plain English:** version B looks better than A, but is it a real improvement or just luck? This tells you whether the difference is statistically real.
 
@@ -14,6 +15,10 @@ dependencies.
 
 [More tools](https://github.com/m-sanchez) · [Working rules](https://miguelsanchez.co.uk/ethics) ·
 [Worked example: routing-study](https://github.com/m-sanchez/routing-study)
+
+*Provenance: a fresh, dependency-free implementation of standard methods,
+written to test the systems the other tools came from. First published
+2026-08-31.*
 
 "B scored 82% and A scored 72%, so B is better" is how good models get
 shipped on ten items of luck. A ten-point gap on a sixty-item eval is
@@ -25,7 +30,7 @@ disagreements, and report an effect-size interval that can exclude zero or
 fail to.
 
 ```ts
-import { compareModels } from 'ab-significance';
+import { compareModels } from '@m-sanchez/ab-significance';
 
 // per-example outcomes; `correct: null` = the model produced no scorable
 // answer (skipped, errored, abstained)
@@ -93,9 +98,9 @@ npm run demo
 npm run typecheck
 ```
 
-Install: `npm install github:m-sanchez/ab-significance#v1.0.1` (not yet on
-npm; CI proves the packed tarball imports). Node 22.18+, zero runtime
-dependencies.
+Install: `npm install @m-sanchez/ab-significance` (or a pinned git tag,
+`github:m-sanchez/ab-significance#v1.0.2`; CI proves the packed tarball
+imports). Node 22.18+, zero runtime dependencies.
 
 ## The tests are the point
 

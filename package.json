@@ -1,6 +1,9 @@
 {
-  "name": "ab-significance",
-  "version": "1.0.1",
+  "name": "@m-sanchez/ab-significance",
+  "version": "1.0.2",
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "Did model B really beat model A, or is it sampling noise? Paired McNemar and bootstrap CI on the common-valid subset - zero dependencies.",
   "type": "module",
   "main": "./dist/index.js",
