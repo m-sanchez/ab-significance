@@ -180,7 +180,7 @@ npm run typecheck
 ```
 
 Install: `npm install @m-sanchez/ab-significance` (or a pinned git tag,
-`github:m-sanchez/ab-significance#v1.0.2`; CI proves the packed tarball
+`github:m-sanchez/ab-significance#v2.0.0`; CI proves the packed tarball
 imports). Node 22.18+, zero runtime dependencies.
 
 ## The tests are the point
