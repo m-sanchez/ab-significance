@@ -22,8 +22,9 @@ written to test the systems the other tools came from. First published
 
 "B scored 82% and A scored 72%, so B is better" is how good models get
 shipped on ten items of luck. A ten-point gap on a sixty-item eval is
-usually inside the noise, and a model that quietly skips the hard
-questions looks better than it is. This answers the comparison honestly:
+usually inside the noise - measured, the exact test resolves it only 31.3%
+of the time - and a model that quietly skips the hard questions looks
+better than it is. This answers the comparison honestly:
 pair the two models on the same examples, restrict to the subset where
 both actually produced a scorable answer, run the exact test on the
 disagreements, and report an effect-size interval that can exclude zero or
@@ -77,6 +78,41 @@ c.statement; // a sentence that refuses to overclaim
   you care about *before* you look is enforced by the option, not left to
   discipline: a separable-but-tiny result gets its own verdict.
 
+## What this instrument actually resolves
+
+Measured, not asserted. Every figure below comes from
+`test/operating-characteristics.test.ts`, which draws simulated evals from
+the same seeded LCG the bootstrap uses, so `npm test` reproduces the table
+exactly and fails if the statistics drift away from it.
+
+How often the exact test declares two models separable at alpha = 0.05, over
+5000 simulated evals in which 20% of examples are discordant:
+
+| common-valid n | no true difference (false positives) | true 10-point gap (power) |
+| --: | --: | --: |
+| 60 | 2.1% | 31.3% |
+| 100 | 3.0% | 54.8% |
+| 200 | 3.6% | 87.1% |
+| 400 | 4.1% | 99.5% |
+
+A real ten-point gap on sixty items is missed about two times in three. The
+false-positive rate sits below the nominal 5% because the discordant count
+is discrete - there is no critical region carrying exactly 5% of the mass -
+so the exact test is conservative by construction.
+
+Coverage of the 95% bootstrap interval, over 500 simulated evals with 600
+resamples each (each figure carries roughly +/-2pp of Monte-Carlo error):
+
+| regime | n = 30 | n = 100 |
+| :-- | --: | --: |
+| true +10pp, 20% discordant | 94.8% | 95.4% |
+| no true difference, 20% discordant | 94.6% | 95.0% |
+| true -5pp, 7% discordant (A 94.5%, B 89.5%) | **85.6%** | 94.8% |
+
+The last row is the one to read twice: when both models are accurate and
+rarely disagree, thirty examples leave the interval about two discordant
+pairs to resample, and it misses a real five-point gap one time in seven.
+
 ## Honest limits
 
 - Comparison is over binary per-example correctness. For a graded or
@@ -88,6 +124,14 @@ c.statement; // a sentence that refuses to overclaim
   a leaderboard, adjust alpha yourself.
 - Exact binomial is used up to any discordant count (log-space, stable);
   the chi-square path exists for comparison, not speed.
+- The percentile interval undercovers when the discordant count is tiny:
+  measured 85.6% coverage of a true 5-point gap at n=30 with 7% discordance
+  (table above). Below roughly ten discordant pairs, read the interval as an
+  illustration and the p-value as the decision.
+- When one discordant cell is empty, no resample can cross zero, so the
+  interval is one-sided by construction rather than by weight of evidence.
+  `bootstrapDiff` flags this as `degenerate`, and `compareModels` says so in
+  the statement instead of reporting a resolved sign.
 
 ## Run
 
