@@ -39,6 +39,8 @@ const c = compareModels(modelA, modelB, { minEffectPct: 2 });
 
 c.verdict;   // 'B better' | 'A better' | 'no separable difference'
              //            | 'separable but below the declared bar'
+             // and, when the evidence will not support any of those:
+             //            | 'instruments disagree' | 'insufficient overlap'
 c.statement; // a sentence that refuses to overclaim
 ```
 
@@ -81,6 +83,11 @@ c.statement; // a sentence that refuses to overclaim
   reach opposite conclusions on small discordant counts, and when they do the
   verdict is `'instruments disagree'` and the statement says which said what.
   It never prints an interval excluding zero beside "not distinguishable".
+- **Degenerate input is refused, not answered.** Two runs with no shared
+  scorable example return `'insufficient overlap'` naming what each side
+  contributed, rather than a confident "not distinguishable" drawn from no
+  data; ids that appear twice are returned on `table.duplicates` instead of
+  quietly shrinking `n`.
 - **How many examples would it take** (`requiredN`,
   `minimumDetectableEffect`). A null result is only worth acting on if the
   eval could have seen the effect. Both answers enumerate the exact binomial
@@ -152,7 +159,8 @@ pairs to resample, and it misses a real five-point gap one time in seven.
   the literature; this one keeps the approximation monotone in the evidence
   and agreeing with the exact default. The divergence is pinned in
   `test/reference-divergence.test.ts` so it stays a decision. The exact path,
-  which is what runs by default, matches scipy to machine precision.
+  which is what runs by default, is not an approximation at all: it sums the
+  binomial terms, so nothing about it can drift.
 - The chi-square survival function is a Chebyshev fit (Numerical Recipes),
   measured against scipy at 8.3e-8 worst-case absolute error over the range
   this package reaches. Chi-square p-values are good to roughly seven
@@ -177,8 +185,19 @@ imports). Node 22.18+, zero runtime dependencies.
 
 ## The tests are the point
 
+`CLAIMS.md` maps every claim on this page to the test that enforces it. The
+load-bearing ones:
+
 | Test | Claim |
 | :-- | :-- |
+| the emitted statement never contradicts the interval printed beside it | the sentence can never assert one conclusion beside numbers that say the opposite |
+| a one-sided interval on four discordant pairs is reported as unresolved | an interval that cannot cross zero is not evidence that the sign is resolved |
+| a broken id join is an explicit insufficient-overlap verdict | a mismatched id scheme is an error, not a scientific negative |
+| power against a true ten-point gap lands in the published band | the measured table on this page is the table the code produces |
+| interval coverage falls short when there is almost nothing to resample | the stated under-coverage is measured, not guessed |
+| the exact enumeration agrees with the simulated power | requiredN and the simulation check each other |
+| the b === c divergence from R and statsmodels is deliberate | a cross-checking user is told which number differs and why |
+| the demo output quoted in the README is the output the demo produces | quoted evidence is reproducible evidence |
 | two-sided binomial matches the hand-computed tail | the exact test is exact |
 | a lopsided small split is separable, an even one is not | McNemar reads the disagreement, not the totals |
 | exact and chi-square agree once counts are large | the exact default is not eccentric, just correct for small n |

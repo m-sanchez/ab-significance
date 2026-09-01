@@ -128,3 +128,53 @@ test('duplicate ids are surfaced, not silently collapsed', () => {
   assert.deepEqual(t.duplicates, ['2'], 'the repeated id is named');
   assert.equal(t.n, 2, 'and n is still the distinct-id count, now visibly so');
 });
+
+test('the exact binomial stays stable at large discordant counts', () => {
+  // "Exact binomial is used up to any discordant count (log-space, stable)":
+  // a naive C(n, k) * 0.5^n overflows the binomial coefficient and underflows
+  // the probability long before this range, and returns NaN or zero.
+  assert.equal(binomialTwoSided(2500, 5000), 1, 'dead centre is p=1 at any n');
+  const deepTail = binomialTwoSided(2000, 5000);
+  assert.ok(
+    deepTail > 0 && deepTail < 1e-40,
+    `a naive implementation returns 0 or NaN here; got ${deepTail}`
+  );
+  let previous = 0;
+  for (let k = 300; k <= 500; k += 10) {
+    const p = binomialTwoSided(k, 1000);
+    assert.ok(Number.isFinite(p) && p > 0 && p <= 1, `p=${p} at k=${k} of 1000`);
+    assert.ok(p > previous, `the p-value must rise as the split evens out (k=${k})`);
+    previous = p;
+  }
+  assert.equal(binomialTwoSided(500, 1000), 1);
+});
+
+test('the bootstrap resamples examples, so the pairing survives', () => {
+  // Resampling the two models independently would inject noise into the
+  // difference even where they never disagree. Resampling examples keeps the
+  // correlation that testing on shared data creates: two models that agree on
+  // every example have an interval of exactly zero width, however inaccurate
+  // they both are.
+  const identical = [
+    ...Array(37).fill({ aCorrect: true, bCorrect: true }),
+    ...Array(23).fill({ aCorrect: false, bCorrect: false })
+  ];
+  const agreed = bootstrapDiff(identical, { seed: 9, iterations: 2000 });
+  assert.equal(agreed.observed, 0);
+  assert.equal(agreed.low, 0);
+  assert.equal(agreed.high, 0);
+  assert.ok(!agreed.significant && !agreed.degenerate);
+
+  // two models of identical accuracy that disagree on twenty examples have
+  // the same observed difference of zero, and a wide interval: the width
+  // tracks the disagreement, not the totals
+  const disagreeing = [
+    ...Array(30).fill({ aCorrect: true, bCorrect: true }),
+    ...Array(30).fill({ aCorrect: false, bCorrect: false }),
+    ...Array(10).fill({ aCorrect: true, bCorrect: false }),
+    ...Array(10).fill({ aCorrect: false, bCorrect: true })
+  ];
+  const wide = bootstrapDiff(disagreeing, { seed: 9, iterations: 2000 });
+  assert.equal(wide.observed, 0);
+  assert.ok(wide.low < -5 && wide.high > 5, `expected a wide interval, got [${wide.low}, ${wide.high}]`);
+});
