@@ -30,17 +30,22 @@
     "type": "git",
     "url": "git+https://github.com/m-sanchez/ab-significance.git"
   },
+  "homepage": "https://github.com/m-sanchez/ab-significance#readme",
+  "bugs": {
+    "url": "https://github.com/m-sanchez/ab-significance/issues"
+  },
   "author": "Miguel Sanchez <contact@miguelsanchez.co.uk>",
   "license": "MIT",
   "keywords": [
     "mcnemar",
     "bootstrap",
-    "significance",
+    "confidence-interval",
+    "statistical-significance",
     "model-comparison",
+    "ab-testing",
     "evaluation",
     "statistics",
-    "machine-learning",
-    "ab-testing"
+    "machine-learning"
   ],
   "engines": {
     "node": ">=22.18"
